@@ -18,6 +18,7 @@ dependencies {
 
   implementation(libs.android.gradle.plugin)
   implementation(libs.dokka.gradle.plugin)
+  implementation(libs.dokka.versioning)
   implementation(libs.dropbox.dependencyGuard)
   implementation(libs.kotlin.gradle.plugin)
   implementation(libs.ktlint.core)
