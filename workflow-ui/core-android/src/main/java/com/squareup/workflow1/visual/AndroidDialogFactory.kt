@@ -3,6 +3,8 @@ package com.squareup.workflow1.visual
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Rect
+import android.os.Build
+import androidx.activity.ComponentDialog
 import com.squareup.workflow1.ui.WorkflowUiExperimentalApi
 import com.squareup.workflow1.ui.container.AndroidOverlay
 import com.squareup.workflow1.ui.container.Overlay
@@ -35,7 +37,7 @@ public object AndroidDialogFactoryKey : VisualEnvironmentKey<AndroidDialogFactor
           val oldHolder = (overlay.dialogFactory as OverlayDialogFactory<Overlay>)
             .buildDialog(overlay, environment, context)
 
-          val glued = OverlayBoxedDialogHolder(oldHolder)
+          val glued = BoxedOverlayDialogHolder(oldHolder)
 
           VisualHolder(glued) {
             glued.oldHolder.runner.invoke(it as Overlay, environment)
@@ -47,7 +49,7 @@ public object AndroidDialogFactoryKey : VisualEnvironmentKey<AndroidDialogFactor
             )
 
             oldFactory.buildDialog(overlay, environment, context).let { oldHolder ->
-              val glued = OverlayBoxedDialogHolder(oldHolder)
+              val glued = BoxedOverlayDialogHolder(oldHolder)
 
               @Suppress("UNCHECKED_CAST")
               VisualHolder<Overlay, BoxedDialog<Dialog>>(glued) {
@@ -60,9 +62,15 @@ public object AndroidDialogFactoryKey : VisualEnvironmentKey<AndroidDialogFactor
 }
 
 @WorkflowUiExperimentalApi
-private class OverlayBoxedDialogHolder<O : Overlay>(
+private class BoxedOverlayDialogHolder<O : Overlay>(
   val oldHolder: OverlayDialogHolder<O>
 ) : BoxedDialog<Dialog> {
+  init {
+    oldHolder.onBackPressed?.let { onBackPressed ->
+      val dispatcher = oldHolder.dialog.takeIf { Build.VERSION.SDK_INT >= 33 }?.onBackPressed()
+    }
+  }
+
   override val dialog: Dialog get() = oldHolder.dialog
 
   override fun onUpdateBounds(bounds: Rect) {

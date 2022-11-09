@@ -18,14 +18,3 @@ public interface BoxedDialog<D: Dialog> {
     dialog.setBounds(bounds)
   }
 }
-
-@WorkflowUiExperimentalApi
-public interface BoxedDialogWithBackHandler<D: Dialog> : BoxedDialog<D> {
-  public fun onBackPressed() {
-    dialog.context.onBackPressedDispatcherOwnerOrNull()
-      ?.onBackPressedDispatcher
-      ?.let {
-        if (it.hasEnabledCallbacks()) it.onBackPressed()
-      }
-  }
-}
