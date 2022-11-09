@@ -4,7 +4,10 @@ import android.app.Dialog
 import android.content.Context
 import android.graphics.Rect
 import android.os.Build
+import android.window.OnBackInvokedDispatcher
 import androidx.activity.ComponentDialog
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.OnBackPressedDispatcherOwner
 import com.squareup.workflow1.ui.WorkflowUiExperimentalApi
 import com.squareup.workflow1.ui.container.AndroidOverlay
 import com.squareup.workflow1.ui.container.Overlay
@@ -67,7 +70,16 @@ private class BoxedOverlayDialogHolder<O : Overlay>(
 ) : BoxedDialog<Dialog> {
   init {
     oldHolder.onBackPressed?.let { onBackPressed ->
-      val dispatcher = oldHolder.dialog.takeIf { Build.VERSION.SDK_INT >= 33 }?.onBackPressed()
+      val dialog = oldHolder.dialog
+      val dispatcher: OnBackPressedDispatcher
+
+      if (dialog is OnBackPressedDispatcherOwner) {
+        dispatcher = dialog.onBackPressedDispatcher
+      } else if (Build.VERSION.SDK_INT >= 33) {
+        dispatcher = oldHolder.dialog.onBackInvokedDispatcher
+      } else {
+        error("")
+      }
     }
   }
 
