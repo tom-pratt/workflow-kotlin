@@ -4,13 +4,23 @@ package com.squareup.workflow1.ui
 
 import android.content.Context
 import android.graphics.drawable.Drawable
+import android.os.Environment
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.IdRes
 import androidx.savedstate.ViewTreeSavedStateRegistryOwner
+import com.squareup.workflow1.ui.WorkflowViewStub.VisualModel
 import com.squareup.workflow1.ui.androidx.WorkflowLifecycleOwner
+import com.squareup.workflow1.ui.container.Overlay
 import com.squareup.workflow1.visual.AndroidViewMultiRendering
+import com.squareup.workflow1.visual.VisualEnvironment
+
+@WorkflowUiExperimentalApi
+public typealias ScreenModel = VisualModel<Screen>
+
+@WorkflowUiExperimentalApi
+public typealias OverlayModel = VisualModel<Overlay>
 
 /**
  * A placeholder [View] that can replace itself with ones driven by workflow renderings,
@@ -191,6 +201,55 @@ public class WorkflowViewStub @JvmOverloads constructor(
     return actual
   }
 
+  @WorkflowUiExperimentalApi
+  public interface VisualModel<out ContentT : Any> {
+    public val content: ContentT
+    public val environment: VisualEnvironment get() = VisualEnvironment.EMPTY
+  }
+
+  @WorkflowUiExperimentalApi
+  public fun <C : Any> VisualModel<C>.withName(name: String): VisualModel<C> {
+    return object : VisualModel<C> by this {
+      override val compatibilityKey: String = "${super.compatibilityKey}+$name"
+    }
+  }
+
+  @WorkflowUiExperimentalApi
+  public fun <C : Any> VisualModel<C>.withEnvironment(env: VisualEnvironment): VisualModel<C> {
+    return object : VisualModel<C> by this {
+      override val environment: VisualEnvironment = super.environment + env
+    }
+  }
+
+  @WorkflowUiExperimentalApi
+  public fun <C : Any, D : Any> VisualModel<C>.map(transform: (C) -> D): VisualModel<D> {
+    val self = this
+    return object : VisualModel<D> {
+      override val content: D = transform(self.content)
+      override val environment: VisualEnvironment = self.environment
+      override val compatibilityKey: String = self.compatibilityKey
+    }
+  }
+
+  public fun show(model: ScreenModel) {
+    show(model.content, model.environment)
+  }
+
+  @WorkflowUiExperimentalApi
+  public interface VizualFactory<ContextT, in ContentT : Any, out VisualT> {
+    public fun createOrNull(
+      model: VisualModel<ContentT>,
+      context: ContextT,
+      environment: VisualEnvironment
+    ): VizualHolder<ContentT, VisualT>?
+  }
+
+  @WorkflowUiExperimentalApi
+  public interface VizualHolder<in ContentT: Any, out VisualT> {
+    public val visual: VisualT
+
+    public fun update(model: VisualModel<ContentT>): Boolean
+  }
   /**
    * Replaces this view with one that can display [rendering]. If the receiver
    * has already been replaced, updates the replacement if it [canShowRendering].

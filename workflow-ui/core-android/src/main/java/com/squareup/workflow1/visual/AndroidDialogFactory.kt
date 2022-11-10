@@ -3,11 +3,6 @@ package com.squareup.workflow1.visual
 import android.app.Dialog
 import android.content.Context
 import android.graphics.Rect
-import android.os.Build
-import android.window.OnBackInvokedDispatcher
-import androidx.activity.ComponentDialog
-import androidx.activity.OnBackPressedDispatcher
-import androidx.activity.OnBackPressedDispatcherOwner
 import com.squareup.workflow1.ui.WorkflowUiExperimentalApi
 import com.squareup.workflow1.ui.container.AndroidOverlay
 import com.squareup.workflow1.ui.container.Overlay
@@ -17,7 +12,7 @@ import com.squareup.workflow1.ui.container.OverlayDialogHolder
 import com.squareup.workflow1.ui.container.show
 
 @WorkflowUiExperimentalApi
-public typealias AndroidDialogFactory<R> = VisualFactory<Context, R, BoxedDialog<Dialog>>
+public typealias AndroidDialogFactory<R> = VisualFactory<Context, R, BoundedDialog<Dialog>>
 
 /**
  * TODO detailed kdoc, see those on [AndroidViewFactoryKey] to get started
@@ -30,17 +25,17 @@ public object AndroidDialogFactoryKey : VisualEnvironmentKey<AndroidDialogFactor
         rendering: Any,
         context: Context,
         environment: VisualEnvironment
-      ): VisualHolder<Any, BoxedDialog<Dialog>>? {
+      ): VisualHolder<Any, BoundedDialog<Dialog>>? {
 
         // TODO find and convert the actual OverlayDialogFactoryFinder instead,
-        //  in case it's been customized. Or does that happen with the multi key?
+        //  in case it's been customized.
 
         return (rendering as? AndroidOverlay<*>)?.let { overlay ->
           @Suppress("UNCHECKED_CAST")
           val oldHolder = (overlay.dialogFactory as OverlayDialogFactory<Overlay>)
             .buildDialog(overlay, environment, context)
 
-          val glued = BoxedOverlayDialogHolder(oldHolder)
+          val glued = BoundedOverlayDialogHolder(oldHolder)
 
           VisualHolder(glued) {
             glued.oldHolder.runner.invoke(it as Overlay, environment)
@@ -52,12 +47,12 @@ public object AndroidDialogFactoryKey : VisualEnvironmentKey<AndroidDialogFactor
             )
 
             oldFactory.buildDialog(overlay, environment, context).let { oldHolder ->
-              val glued = BoxedOverlayDialogHolder(oldHolder)
+              val glued = BoundedOverlayDialogHolder(oldHolder)
 
               @Suppress("UNCHECKED_CAST")
-              VisualHolder<Overlay, BoxedDialog<Dialog>>(glued) {
+              VisualHolder<Overlay, BoundedDialog<Dialog>>(glued) {
                 glued.oldHolder.show(it, environment)
-              } as VisualHolder<Any, BoxedDialog<Dialog>>
+              } as VisualHolder<Any, BoundedDialog<Dialog>>
             }
           }
       }
@@ -65,21 +60,14 @@ public object AndroidDialogFactoryKey : VisualEnvironmentKey<AndroidDialogFactor
 }
 
 @WorkflowUiExperimentalApi
-private class BoxedOverlayDialogHolder<O : Overlay>(
+private class BoundedOverlayDialogHolder<O : Overlay>(
   val oldHolder: OverlayDialogHolder<O>
-) : BoxedDialog<Dialog> {
+) : BoundedDialog<Dialog> {
   init {
-    oldHolder.onBackPressed?.let { onBackPressed ->
-      val dialog = oldHolder.dialog
-      val dispatcher: OnBackPressedDispatcher
-
-      if (dialog is OnBackPressedDispatcherOwner) {
-        dispatcher = dialog.onBackPressedDispatcher
-      } else if (Build.VERSION.SDK_INT >= 33) {
-        dispatcher = oldHolder.dialog.onBackInvokedDispatcher
-      } else {
-        error("")
-      }
+    require(oldHolder.onBackPressed == null) {
+      "We can't roll this out for real until we have forced the migration to ComponentDialog and " +
+        "OnBackPressedDispatcher, and therefore eliminated this onBackPressed call. Or else " +
+        "we just punt on backward compatibility."
     }
   }
 
@@ -87,10 +75,6 @@ private class BoxedOverlayDialogHolder<O : Overlay>(
 
   override fun onUpdateBounds(bounds: Rect) {
     oldHolder.onUpdateBounds?.invoke(bounds)
-  }
-
-  override fun onBackPressed() {
-    oldHolder.onBackPressed?.invoke() ?: oldHolder.dialog.onBackPressed()
   }
 }
 

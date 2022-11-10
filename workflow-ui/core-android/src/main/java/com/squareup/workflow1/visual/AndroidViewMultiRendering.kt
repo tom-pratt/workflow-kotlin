@@ -52,16 +52,6 @@ public class AndroidViewMultiRendering : MultiRendering<Context, View>() {
  * Compose integration will provide an alternative implementation that
  * extends this one to wrap Compose-specific VisualFactories in ComposeView.
  *
- * TODO: it is confusing that the VisualEnvironmentKey for this is
- *   AndroidViewMultiRendering. Perhaps make DefaultAndroidViewFactory public,
- *   and let it serve as its own key.
- *
- * TODO: This is seeming redundant with AndroidViewFactoryKey, is the split
- *   between them arbitrary? No, not redundant b/c this is the implementation
- *   of AndroidViewMultiRendering, which we will want to be able to replace with
- *   one that is aware of Compose. But probably the named stuff can't
- *   actually live here.
- *
  * TODO: Trying to go back to Named<>, but that won't work with the Screen
  *   and Overlay marker interfaces. How about something like this:
  *
