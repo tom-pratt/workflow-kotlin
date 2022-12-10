@@ -145,16 +145,30 @@ public class WorkflowIdentifier internal constructor(
 
 /**
  * The [WorkflowIdentifier] that identifies this [Workflow].
+ *
+ * This can carry some cost if the Workflow class does not extend [StatefulWorkflow] or
  */
-public val Workflow<*, *, *>.identifier: WorkflowIdentifier
+public inline val Workflow<*, *, *>.identifier: WorkflowIdentifier
   get() {
-    val maybeImpostor = this as? ImpostorWorkflow
-    return WorkflowIdentifier(
-      type = Snapshottable(this::class),
-      proxiedIdentifier = maybeImpostor?.realIdentifier,
-      description = maybeImpostor?.let { it::describeRealIdentifier }
-    )
+    return when (this) {
+      is IdCacheable -> cachedIdentifier
+      else -> computeIdentifier()
+    }
   }
+
+/**
+ * Compute the [WorkflowIdentifier] for this Workflow. [StatefulWorkflow] and [StatelessWorkflow]
+ * will call this and then cache the value in their internal _identifier property so as to prevent
+ * the extra work needed to create the [WorkflowIdentifier] and look up the class name each time.
+ */
+public fun Workflow<*, *, *>.computeIdentifier(): WorkflowIdentifier {
+  val maybeImpostor = this as? ImpostorWorkflow
+  return WorkflowIdentifier(
+    type = Snapshottable(this::class),
+    proxiedIdentifier = maybeImpostor?.realIdentifier,
+    description = maybeImpostor?.let { it::describeRealIdentifier }
+  )
+}
 
 /**
  * Creates a [WorkflowIdentifier] that is not capable of being snapshotted and will cause any
